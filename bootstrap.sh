@@ -15,9 +15,9 @@
 # ----------------------------------------
 
 PLUGIN_NAME="$(basename $(dirname $(realpath $0)))"  # name of current directory
-PLUGIN_TITLE='My ChRIS Plugin'
-SCRIPT_NAME='commandname'
-DESCRIPTION='A ChRIS plugin to do something awesome'
+PLUGIN_TITLE='A dynamic ChRIS plugin for PACS'
+SCRIPT_NAME='dypxFlow'
+DESCRIPTION='A dynamic ChRIS plugin to control PACS related workflows in CUBE'
 ORGANIZATION='FNNDSC'
 EMAIL='dev@babyMRI.org'
 
@@ -30,7 +30,7 @@ EMAIL='dev@babyMRI.org'
 
 # Automatically test on Github Actions each time you run `git push`
 # If the value is "no" then tests are not performed. There are no side effects.
-ENABLE_ACTIONS_TEST=yes
+ENABLE_ACTIONS_TEST=no
 # Automatically build images on Github Actions each time you run `git push`,
 # and also publish to https://chrisstore.co each time you run `git push --tags`
 # If the value is "no" then builds will not be automated.
@@ -46,7 +46,7 @@ ENABLE_ACTIONS_BUILD=yes
 # STEP 2. Uncomment the line where it says READY=yes
 # ----------------------------------------
 
-#READY=yes
+READY=yes
 
 # ----------------------------------------
 # STEP 3. Run: ./bootstrap.sh
