@@ -19,18 +19,18 @@ def get_version(rel_path: str) -> str:
 
 
 setup(
-    name='chris-plugin-template',
-    version=get_version('app.py'),
-    description='A ChRIS DS plugin template',
+    name='dypxFlow',
+    version=get_version('dypxFlow.py'),
+    description='A dynamic ChRIS plugin to control PACS related workflows in CUBE',
     author='FNNDSC',
     author_email='dev@babyMRI.org',
-    url='https://github.com/FNNDSC/python-chrisapp-template',
-    py_modules=['app'],
+    url='https://github.com/FNNDSC/pl-dypxFlow',
+    py_modules=['dypxFlow','base_client','chrisClient','pfdcm','chris_pacs_service','pipeline'],
     install_requires=['chris_plugin'],
     license='MIT',
     entry_points={
         'console_scripts': [
-            'commandname = app:main'
+            'dypxFlow = dypxFlow:main'
         ]
     },
     classifiers=[
