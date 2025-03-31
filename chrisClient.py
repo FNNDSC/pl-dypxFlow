@@ -56,13 +56,9 @@ class ChrisClient(BaseClient):
                 "CUBEuser": self.cl.username,
                 "CUBEpassword": self.cl.password,
                 "inputJSONfile": "search_results.json",
-                "tagStruct": json.dumps(params["anon"]),
-                "orthancUrl": params["push"]["url"],
-                "orthancUsername": params["push"]["username"],
-                "orthancPassword": params["push"]["password"],
+                "folderName": params["push"]["Folder name"],
                 "PACSurl": params["pull"]["url"],
                 "PACSname": params["pull"]["pacs"],
-                "pushToRemote": params["push"]["aec"]
             }
         }
-        pipe.workflow_schedule(pv_id,"PACS query, retrieve, and registration verification in CUBE 20241217",plugin_params)
+        pipe.workflow_schedule(pv_id,"PACS query, retrieve, registration verification, and run pipeline in CUBE 20250331",plugin_params)

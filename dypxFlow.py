@@ -89,24 +89,6 @@ parser.add_argument(
     help='Orthanc server url. Please include api version in the url endpoint.',
     default='http://0.0.0.0:8042'
 )
-
-parser.add_argument(
-    '--orthancUsername',
-    help='Orthanc server username',
-    default='orthanc'
-)
-
-parser.add_argument(
-    '--orthancPassword',
-    help='Orthanc server password',
-    default='orthanc'
-)
-
-parser.add_argument(
-    '--pushToRemote',
-    help='Remote modality',
-    default=''
-)
 parser.add_argument(
     "--thread",
     help="use threading to branch in parallel",
@@ -203,13 +185,6 @@ def register_and_anonymize(options: Namespace, d_job: dict, wait: bool = False):
         "url": options.PACSurl,
         "pacs": options.PACSname
     }
-    d_job["push"] = {
-        "url": options.orthancUrl,
-        "username": options.orthancUsername,
-        "password": options.orthancPassword,
-        "aec": options.pushToRemote,
-        "wait": wait
-    }
     LOG(d_job)
     cube_con = ChrisClient(options.CUBEurl, options.CUBEuser, options.CUBEpassword)
     cube_con.anonymize(d_job, options.pluginInstanceID)
@@ -217,7 +192,7 @@ def register_and_anonymize(options: Namespace, d_job: dict, wait: bool = False):
 
 def health_check(options) -> bool:
     """
-    check if connections to pfdcm, orthanc, and CUBE is valid
+    check if connections to pfdcm and CUBE is valid
     """
     try:
         if not options.pluginInstanceID:
@@ -248,7 +223,7 @@ def create_query(df: pd.DataFrame):
     for column in df.columns:
         if "search" in str(column).lower():
             l_srch_idx.append(df.columns.get_loc(column))
-        if "anon" in str(column).lower():
+        if "folder" in str(column).lower():
             l_anon_idx.append(df.columns.get_loc(column))
 
     l_job = []
@@ -263,8 +238,8 @@ def create_query(df: pd.DataFrame):
 
         a_col = (df.columns[l_anon_idx].values)
         a_row = (row[1].iloc[l_anon_idx].values)
-        a_d = [{k.split('.')[0].split('_')[1]: v} for k, v in zip(a_col, a_row)]
-        d_job["anon"] = dict(ChainMap(*a_d))
+        a_d = [{k: v} for k, v in zip(a_col, a_row)]
+        d_job["push"] = dict(ChainMap(*a_d))
 
         l_job.append(d_job)
 
