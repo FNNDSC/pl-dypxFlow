@@ -29,7 +29,7 @@ logger_format = (
 logger.remove()
 logger.add(sys.stderr, format=logger_format)
 
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 
 DISPLAY_TITLE = r"""
        _           _                ______ _               
@@ -120,6 +120,12 @@ parser.add_argument(
     help="an optional pftel telemetry logger, of form '<pftelURL>/api/v1/<object>/<collection>/<event>'",
     default="",
 )
+parser.add_argument(
+    '--neuroLocation',
+    default='',
+    type=str,
+    help='path in the neuro tree to push analysis data'
+)
 
 
 # The main function of this *ChRIS* plugin is denoted by this ``@chris_plugin`` "decorator."
@@ -185,6 +191,7 @@ def register_and_anonymize(options: Namespace, d_job: dict, wait: bool = False):
         "url": options.PACSurl,
         "pacs": options.PACSname
     }
+    d_job["push"]["neuro_location"] = options.neuroLocation
     LOG(d_job)
     cube_con = ChrisClient(options.CUBEurl, options.CUBEuser, options.CUBEpassword)
     cube_con.anonymize(d_job, options.pluginInstanceID)

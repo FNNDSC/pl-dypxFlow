@@ -57,6 +57,7 @@ class ChrisClient(BaseClient):
                 "CUBEpassword": self.cl.password,
                 "inputJSONfile": "search_results.json",
                 "folderName": params["push"]["Folder name"],
+                "neuroLocation": params["push"]["neuro_location"],
                 "PACSurl": params["pull"]["url"],
                 "PACSname": params["pull"]["pacs"],
             }
