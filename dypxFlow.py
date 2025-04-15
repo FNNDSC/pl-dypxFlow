@@ -29,7 +29,7 @@ logger_format = (
 logger.remove()
 logger.add(sys.stderr, format=logger_format)
 
-__version__ = '1.0.1'
+__version__ = '1.0.2'
 
 DISPLAY_TITLE = r"""
        _           _                ______ _               
@@ -85,11 +85,6 @@ parser.add_argument(
     help="CUBE/ChRIS password"
 )
 parser.add_argument(
-    '--orthancUrl',
-    help='Orthanc server url. Please include api version in the url endpoint.',
-    default='http://0.0.0.0:8042'
-)
-parser.add_argument(
     "--thread",
     help="use threading to branch in parallel",
     dest="thread",
@@ -120,14 +115,12 @@ parser.add_argument(
     help="an optional pftel telemetry logger, of form '<pftelURL>/api/v1/<object>/<collection>/<event>'",
     default="",
 )
-parser.add_argument(
-    '--neuroLocation',
-    default='',
-    type=str,
-    help='path in the neuro tree to push analysis data'
-)
 
-
+def skip_condition(row):
+    # Skip rows where 'col2' is greater than 3 or 'col1' is 'B'
+    if row[7]:
+        return True
+    return False
 # The main function of this *ChRIS* plugin is denoted by this ``@chris_plugin`` "decorator."
 # Some metadata about the plugin is specified here. There is more metadata specified in setup.py.
 #
@@ -167,7 +160,7 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
     mapper = PathMapper.file_mapper(inputdir, outputdir, glob=options.pattern)
     for input_file, output_file in mapper:
 
-        df = pd.read_csv(input_file, dtype=str)
+        df = pd.read_csv(input_file, dtype=str,skiprows=lambda x: 0 if x == 0 else skip_condition(pd.read_csv(input_file, nrows=x).iloc[-1].tolist()) )
         l_job = create_query(df)
         if int(options.thread):
             with concurrent.futures.ThreadPoolExecutor(max_workers=int(options.maxThreads)) as executor:
@@ -191,7 +184,6 @@ def register_and_anonymize(options: Namespace, d_job: dict, wait: bool = False):
         "url": options.PACSurl,
         "pacs": options.PACSname
     }
-    d_job["push"]["neuro_location"] = options.neuroLocation
     LOG(d_job)
     cube_con = ChrisClient(options.CUBEurl, options.CUBEuser, options.CUBEpassword)
     cube_con.anonymize(d_job, options.pluginInstanceID)
@@ -231,6 +223,8 @@ def create_query(df: pd.DataFrame):
         if "search" in str(column).lower():
             l_srch_idx.append(df.columns.get_loc(column))
         if "folder" in str(column).lower():
+            l_anon_idx.append(df.columns.get_loc(column))
+        if "path" in str(column).lower():
             l_anon_idx.append(df.columns.get_loc(column))
 
     l_job = []
