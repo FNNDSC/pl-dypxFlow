@@ -160,8 +160,10 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
     mapper = PathMapper.file_mapper(inputdir, outputdir, glob=options.pattern)
     for input_file, output_file in mapper:
 
-        df = pd.read_csv(input_file, dtype=str,skiprows=lambda x: 0 if x == 0 else skip_condition(pd.read_csv(input_file, nrows=x).iloc[-1].tolist()) )
-        l_job = create_query(df)
+        df = pd.read_csv(input_file, dtype=str) #,skiprows=lambda x: 0 if x == 0 else skip_condition(pd.read_csv(input_file, nrows=x).iloc[-1].tolist()) )
+        # drop all nan values
+        df_clean = df.fillna('')
+        l_job = create_query(df_clean)
         if int(options.thread):
             with concurrent.futures.ThreadPoolExecutor(max_workers=int(options.maxThreads)) as executor:
                 results: Iterator = executor.map(lambda t: register_and_anonymize(options, t, options.wait), l_job)

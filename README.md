@@ -1,6 +1,6 @@
 # A dynamic ChRIS plugin for PACS
 
-[![Version](https://img.shields.io/docker/v/fnndsc/pl-dypxFlow?sort=semver)](https://hub.docker.com/r/fnndsc/pl-dypxFlow)
+[![Version](https://img.shields.io/docker/v/fnndsc/pl-dypxFlow?sort=semver)](https://hub.docker.com/r/fnndsc/pl-dypxflow)
 [![MIT License](https://img.shields.io/github/license/fnndsc/pl-dypxFlow)](https://github.com/FNNDSC/pl-dypxFlow/blob/main/LICENSE)
 [![ci](https://github.com/FNNDSC/pl-dypxFlow/actions/workflows/ci.yml/badge.svg)](https://github.com/FNNDSC/pl-dypxFlow/actions/workflows/ci.yml)
 
