@@ -29,7 +29,7 @@ logger_format = (
 logger.remove()
 logger.add(sys.stderr, format=logger_format)
 
-__version__ = '1.0.2'
+__version__ = '1.0.3'
 
 DISPLAY_TITLE = r"""
        _           _                ______ _               
@@ -117,10 +117,10 @@ parser.add_argument(
 )
 
 def skip_condition(row):
-    # Skip rows where 'col2' is greater than 3 or 'col1' is 'B'
-    if row[7]:
-        return True
-    return False
+    # Skip rows where starting column says 'no'
+    if row[0] == 'yes':
+        return False
+    return True
 # The main function of this *ChRIS* plugin is denoted by this ``@chris_plugin`` "decorator."
 # Some metadata about the plugin is specified here. There is more metadata specified in setup.py.
 #
@@ -160,7 +160,7 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
     mapper = PathMapper.file_mapper(inputdir, outputdir, glob=options.pattern)
     for input_file, output_file in mapper:
 
-        df = pd.read_csv(input_file, dtype=str) #,skiprows=lambda x: 0 if x == 0 else skip_condition(pd.read_csv(input_file, nrows=x).iloc[-1].tolist()) )
+        df = pd.read_csv(input_file, dtype=str,skiprows=lambda x: 0 if x == 0 else skip_condition(pd.read_csv(input_file, nrows=x).iloc[-1].tolist()) )
         # drop all nan values
         df_clean = df.fillna('')
         l_job = create_query(df_clean)
