@@ -118,7 +118,7 @@ parser.add_argument(
 
 def skip_condition(row):
     # Skip rows where starting column says 'no'
-    if row[0] == 'yes':
+    if row[0].lower() == 'yes':
         return False
     return True
 # The main function of this *ChRIS* plugin is denoted by this ``@chris_plugin`` "decorator."
