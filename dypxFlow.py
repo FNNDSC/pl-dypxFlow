@@ -197,8 +197,8 @@ def register_and_anonymize(options: Namespace, d_job: dict, wait: bool = False):
     }
     LOG(d_job)
     cube_con = ChrisClient(options.CUBEurl, options.CUBEuser, options.CUBEpassword)
-    cube_con.anonymize(d_job, options.pluginInstanceID)
-    return "processed"
+    d_ret = cube_con.anonymize(d_job, options.pluginInstanceID)
+    return d_ret['status']
 
 
 def health_check(options) -> bool:

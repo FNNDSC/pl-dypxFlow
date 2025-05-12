@@ -64,10 +64,10 @@ class ChrisClient(BaseClient):
                 "PACSname": params["pull"]["pacs"],
             }
         }
-        pipe.flow_executeAndBlockUntilNodeComplete(
+        d_ret = pipe.flow_executeAndBlockUntilNodeComplete(
             attachToNodeID = pv_id,
             workflowTitle = "PACS query, retrieve, registration verification, and run pipeline in CUBE 20250331",
             waitForNodeWithTitle = "verify-registration",
             totalPolls = 100,
             pluginParameters = plugin_params )
-        # pipe.workflow_schedule(pv_id,"PACS query, retrieve, registration verification, and run pipeline in CUBE 20250331",plugin_params)
+        return d_ret
