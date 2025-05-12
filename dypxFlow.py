@@ -196,8 +196,11 @@ def register_and_anonymize(options: Namespace, d_job: dict, wait: bool = False):
         "pacs": options.PACSname
     }
     LOG(d_job)
-    cube_con = ChrisClient(options.CUBEurl, options.CUBEuser, options.CUBEpassword)
-    d_ret = cube_con.anonymize(d_job, options.pluginInstanceID)
+    if not d_job["push"]["status"]:
+        cube_con = ChrisClient(options.CUBEurl, options.CUBEuser, options.CUBEpassword)
+        d_ret = cube_con.anonymize(d_job, options.pluginInstanceID)
+    else:
+        d_ret = d_job["push"]
     return d_ret['status']
 
 
@@ -234,6 +237,8 @@ def create_query(df: pd.DataFrame):
     for column in df.columns:
         if "search" in str(column).lower():
             l_srch_idx.append(df.columns.get_loc(column))
+        if "status" in str(column).lower():
+            l_anon_idx.append(df.columns.get_loc(column))
         if "folder" in str(column).lower():
             l_anon_idx.append(df.columns.get_loc(column))
         if "path" in str(column).lower():
