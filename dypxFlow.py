@@ -160,10 +160,11 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
     mapper = PathMapper.file_mapper(inputdir, outputdir, glob=options.pattern)
     for input_file, output_file in mapper:
 
-        df = pd.read_csv(input_file, dtype=str,skiprows=lambda x: 0 if x == 0 else skip_condition(pd.read_csv(input_file, nrows=x).iloc[-1].tolist()) )
+        df = pd.read_csv(input_file, dtype=str) #,skiprows=lambda x: 0 if x == 0 else skip_condition(pd.read_csv(input_file, nrows=x).iloc[-1].tolist()) )
         # drop all nan values
         df_clean = df.fillna('')
         l_job = create_query(df_clean)
+        d_df = []
         if int(options.thread):
             with concurrent.futures.ThreadPoolExecutor(max_workers=int(options.maxThreads)) as executor:
                 results: Iterator = executor.map(lambda t: register_and_anonymize(options, t, options.wait), l_job)
@@ -172,7 +173,15 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
             # executor.shutdown(wait=True)
         else:
             for d_job in l_job:
-                register_and_anonymize(options, d_job)
+                status = register_and_anonymize(options, d_job)
+                row = d_job["search"]
+                row.update(d_job["push"])
+                row["status"] = status
+                d_df.append(row)
+
+        csv_file = os.path.join(options.outputdir, 'pull_data.csv')
+        df = pd.DataFrame(d_df)
+        df.to_csv(csv_file, index=False)
 
 
 if __name__ == '__main__':
@@ -189,6 +198,7 @@ def register_and_anonymize(options: Namespace, d_job: dict, wait: bool = False):
     LOG(d_job)
     cube_con = ChrisClient(options.CUBEurl, options.CUBEuser, options.CUBEpassword)
     cube_con.anonymize(d_job, options.pluginInstanceID)
+    return "processed"
 
 
 def health_check(options) -> bool:
