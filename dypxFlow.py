@@ -174,7 +174,7 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
         else:
             for d_job in l_job:
                 status = register_and_anonymize(options, d_job)
-                row = d_job["search"]
+                row = d_job["raw"]
                 row.update(d_job["push"])
                 row["status"] = status
                 d_df.append(row)
@@ -253,6 +253,8 @@ def create_query(df: pd.DataFrame):
         s_row = (row[1].iloc[l_srch_idx].values)
         s_d = [{k.split('.')[0].split('_')[1]: v} for k, v in zip(s_col, s_row)]
         d_job["search"] = dict(ChainMap(*s_d))
+        raw_d = [{k: v} for k, v in zip(s_col, s_row)]
+        d_job["raw"] = dict(ChainMap(*raw_d))
 
         a_col = (df.columns[l_anon_idx].values)
         a_row = (row[1].iloc[l_anon_idx].values)
