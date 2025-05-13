@@ -29,7 +29,7 @@ logger_format = (
 logger.remove()
 logger.add(sys.stderr, format=logger_format)
 
-__version__ = '1.0.3'
+__version__ = '1.0.4'
 
 DISPLAY_TITLE = r"""
        _           _                ______ _               
@@ -179,7 +179,7 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
                 row["status"] = status
                 d_df.append(row)
 
-        csv_file = os.path.join(options.outputdir, 'pull_data.csv')
+        csv_file = os.path.join(options.outputdir, input_file.name)
         df = pd.DataFrame(d_df)
         df.to_csv(csv_file, index=False)
 
@@ -234,7 +234,9 @@ def health_check(options) -> bool:
 def create_query(df: pd.DataFrame):
     l_srch_idx = []
     l_anon_idx = []
+    l_raw_idx = []
     for column in df.columns:
+        l_raw_idx.append(df.columns.get_loc(column))
         if "search" in str(column).lower():
             l_srch_idx.append(df.columns.get_loc(column))
         if "status" in str(column).lower():
@@ -253,13 +255,21 @@ def create_query(df: pd.DataFrame):
         s_row = (row[1].iloc[l_srch_idx].values)
         s_d = [{k.split('.')[0].split('_')[1]: v} for k, v in zip(s_col, s_row)]
         d_job["search"] = dict(ChainMap(*s_d))
-        raw_d = [{k: v} for k, v in zip(s_col, s_row)]
-        d_job["raw"] = dict(ChainMap(*raw_d))
 
         a_col = (df.columns[l_anon_idx].values)
         a_row = (row[1].iloc[l_anon_idx].values)
         a_d = [{k: v} for k, v in zip(a_col, a_row)]
         d_job["push"] = dict(ChainMap(*a_d))
+
+        raw_col = (df.columns[l_raw_idx].values)
+        raw_row = (row[1].iloc[l_raw_idx].values)
+        raw_d = [{k: v} for k, v in zip(raw_col, raw_row)]
+        # Combine and reverse the dictionary
+        combined = dict(ChainMap(*raw_d))
+        reversed_dict = dict(reversed(combined.items()))
+
+        # Assign to your object
+        d_job["raw"] = reversed_dict
 
         l_job.append(d_job)
 

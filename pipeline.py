@@ -108,6 +108,7 @@ class Pipeline:
 
         if waitOnPluginID >= 0:
             while 'finished' not in str_pluginStatus.lower() and \
+                'cancelled' not in str_pluginStatus.lower() and \
                     pollCount <= totalPolls:
                 d_plinfo = self.cl.get_plugin_instance_by_id(waitOnPluginID)
                 str_pluginStatus = d_plinfo['status']
