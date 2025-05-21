@@ -29,7 +29,7 @@ logger_format = (
 logger.remove()
 logger.add(sys.stderr, format=logger_format)
 
-__version__ = '1.0.4'
+__version__ = '1.0.5'
 
 DISPLAY_TITLE = r"""
        _           _                ______ _               
@@ -161,7 +161,10 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
     for input_file, output_file in mapper:
 
         df = pd.read_csv(input_file, dtype=str) #,skiprows=lambda x: 0 if x == 0 else skip_condition(pd.read_csv(input_file, nrows=x).iloc[-1].tolist()) )
-        # drop all nan values
+        #1 Remove rows with all NaN values
+        df.dropna(how='all', inplace=True)
+
+        #2 Replace NaN values with empty strings
         df_clean = df.fillna('')
         l_job = create_query(df_clean)
         d_df = []
