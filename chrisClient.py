@@ -24,7 +24,7 @@ logger.add(sys.stderr, format=logger_format)
 class ChrisClient(BaseClient):
     def __init__(self, url: str, username: str, password: str):
         self.cl = client.Client(url, username, password)
-        self.cl.pacs_series_url = f"{url}pacs/series/"
+        self.cl.pacs_series_url = f"{url}/pacs/series/"
         self.req = PACSClient(self.cl.pacs_series_url,username,password)
 
     def create_con(self,params:dict):
@@ -64,10 +64,8 @@ class ChrisClient(BaseClient):
                 "PACSname": params["pull"]["pacs"],
             }
         }
-        d_ret = pipe.flow_executeAndBlockUntilNodeComplete(
-            attachToNodeID = pv_id,
-            workflowTitle = "PACS query, retrieve, registration verification, and run pipeline in CUBE 20250331",
-            waitForNodeWithTitle = "verify-registration",
-            totalPolls = 100,
-            pluginParameters = plugin_params )
+        d_ret = pipe.run_pipeline(
+            previous_inst = pv_id,
+            pipeline_name = "PACS query, retrieve, registration verification, and run pipeline in CUBE 20250806",
+            pipeline_params = plugin_params )
         return d_ret

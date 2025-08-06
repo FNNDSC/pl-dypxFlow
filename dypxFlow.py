@@ -29,7 +29,7 @@ logger_format = (
 logger.remove()
 logger.add(sys.stderr, format=logger_format)
 
-__version__ = '1.0.5'
+__version__ = '1.0.6'
 
 DISPLAY_TITLE = r"""
        _           _                ______ _               
@@ -43,9 +43,7 @@ DISPLAY_TITLE = r"""
 """
 
 
-parser = ArgumentParser(description='!!!CHANGE ME!!! An example ChRIS plugin which '
-                                    'counts the number of occurrences of a given '
-                                    'word in text files.',
+parser = ArgumentParser(description='A dynamic ChRIS plugin to run anonymization pipeline',
                         formatter_class=ArgumentDefaultsHelpFormatter)
 parser.add_argument(
     '-V', '--version',
@@ -155,7 +153,7 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
     # adding a progress bar and parallelism.
     log_file = os.path.join(options.outputdir, 'terminal.log')
     logger.add(log_file)
-    if not health_check(options): return
+    if not health_check(options): sys.exit("An error occurred!")
 
     mapper = PathMapper.file_mapper(inputdir, outputdir, glob=options.pattern)
     for input_file, output_file in mapper:
@@ -235,45 +233,42 @@ def health_check(options) -> bool:
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
 def create_query(df: pd.DataFrame):
-    l_srch_idx = []
-    l_anon_idx = []
-    l_raw_idx = []
-    for column in df.columns:
-        l_raw_idx.append(df.columns.get_loc(column))
-        if "search" in str(column).lower():
-            l_srch_idx.append(df.columns.get_loc(column))
-        if "status" in str(column).lower():
-            l_anon_idx.append(df.columns.get_loc(column))
-        if "folder" in str(column).lower():
-            l_anon_idx.append(df.columns.get_loc(column))
-        if "path" in str(column).lower():
-            l_anon_idx.append(df.columns.get_loc(column))
+    columns = df.columns
+    col_locs = {col: i for i, col in enumerate(columns)}
+
+    # Classify columns
+    l_srch_idx = [i for i, col in enumerate(columns) if "search" in str(col).lower()]
+    l_anon_idx = [i for i, col in enumerate(columns) if any(x in str(col).lower() for x in ("status", "folder", "path"))]
+    l_raw_idx = list(range(len(columns)))  # All columns
 
     l_job = []
 
-    for row in df.iterrows():
-        d_job = {}
+    for row in df.itertuples(index=False):
+        row_values = list(row)
 
-        s_col = (df.columns[l_srch_idx].values)
-        s_row = (row[1].iloc[l_srch_idx].values)
-        s_d = [{k.split('.')[0].split('_')[1]: v} for k, v in zip(s_col, s_row)]
-        d_job["search"] = dict(ChainMap(*s_d))
+        # Search
+        s_d = [
+            {columns[i].split('.')[0].split('_')[1]: row_values[i]}
+            for i in l_srch_idx
+        ]
+        # Push/Anonymization
+        a_d = [
+            {columns[i]: row_values[i]}
+            for i in l_anon_idx
+        ]
+        # Raw
+        raw_d = [
+            {columns[i]: row_values[i]}
+            for i in l_raw_idx
+        ]
+        reversed_dict = dict(reversed(dict(ChainMap(*raw_d)).items()))
 
-        a_col = (df.columns[l_anon_idx].values)
-        a_row = (row[1].iloc[l_anon_idx].values)
-        a_d = [{k: v} for k, v in zip(a_col, a_row)]
-        d_job["push"] = dict(ChainMap(*a_d))
-
-        raw_col = (df.columns[l_raw_idx].values)
-        raw_row = (row[1].iloc[l_raw_idx].values)
-        raw_d = [{k: v} for k, v in zip(raw_col, raw_row)]
-        # Combine and reverse the dictionary
-        combined = dict(ChainMap(*raw_d))
-        reversed_dict = dict(reversed(combined.items()))
-
-        # Assign to your object
-        d_job["raw"] = reversed_dict
-
-        l_job.append(d_job)
+        l_job.append({
+            "search": dict(ChainMap(*s_d)),
+            "push": dict(ChainMap(*a_d)),
+            "raw": reversed_dict
+        })
 
     return l_job
+
+
