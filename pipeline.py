@@ -76,9 +76,19 @@ class Pipeline:
         stop=stop_after_attempt(5),
         reraise=True
     )
-    def make_request(self, method, endpoint, **kwargs):
+    def make_request(self, method: str, endpoint: str, **kwargs):
         url = f"{self.api_base}{endpoint}"
-        response = requests.request(method, url, headers=self.headers, auth=self.auth, timeout=5, **kwargs)
+        response = requests.request(method, url, headers=self.headers, auth=self.auth, timeout=30, **kwargs)
+        response.raise_for_status()
+
+        try:
+            return response.json().get("collection", {}).get("items", [])
+        except ValueError:
+            return response.text
+
+    def post_request(self, endpoint: str, **kwargs):
+        url = f"{self.api_base}{endpoint}"
+        response = requests.request("POST", url, headers=self.headers, auth=self.auth, timeout=30, **kwargs)
         response.raise_for_status()
 
         try:
@@ -93,6 +103,7 @@ class Pipeline:
         """Fetch pipeline ID by name."""
         logger.info(f"Fetching ID for pipeline: {name}")
         response = self.make_request("GET", f"/pipelines/search/?name={name}")
+
         for item in response:
             for field in item.get("data", []):
                 if field.get("name") == "id":
@@ -113,7 +124,7 @@ class Pipeline:
             "previous_plugin_inst_id": previous_id,
             "nodes_info": json.dumps(params)
         }
-        return self.make_request("POST", f"/pipelines/{pipeline_id}/workflows/", json=payload)
+        return self.post_request( f"/pipelines/{pipeline_id}/workflows/", json=payload)
 
     def run_pipeline(self, pipeline_name: str, previous_inst: int, pipeline_params: dict):
         """
@@ -129,7 +140,7 @@ class Pipeline:
             nodes_info = compute_workflow_nodes_info(default_params, include_all_defaults=True)
             updated_params = update_plugin_parameters(nodes_info, pipeline_params)
             workflow = self.post_workflow(pipeline_id=pipeline_id, previous_id=previous_inst, params=updated_params)
-            logger.info(f"Workflow posted successfully: {workflow}")
+            logger.info(f"Workflow posted successfully")
             return {"status": "Pipeline running"}
         except Exception as ex:
             logger.error(f"Running pipeline failed due to: {ex}")
