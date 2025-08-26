@@ -1,10 +1,8 @@
 ### Python Chris Client Implementation ###
 
 from base_client import BaseClient
-from chrisclient import client
-from chris_pacs_service import PACSClient
 import json
-import time
+import requests
 from loguru import logger
 import sys
 from pipeline import Pipeline
@@ -22,23 +20,29 @@ logger.remove()
 logger.add(sys.stderr, format=logger_format)
 
 class ChrisClient(BaseClient):
-    def __init__(self, url: str, username: str, password: str):
-        self.cl = client.Client(url, username, password)
-        self.cl.pacs_series_url = f"{url}/pacs/series/"
-        self.req = PACSClient(self.cl.pacs_series_url,username,password)
-
-    def create_con(self,params:dict):
-        return self.cl
+    def __init__(self, url: str, token: str):
+        self.api_base = url.rstrip('/')
+        self.auth = token
+        self.headers = {"Content-Type": "application/json", "Authorization": f"Token {token}"}
+        self.pacs_series_url = f"{url}/pacs/series/"
 
     def health_check(self):
-        return self.cl.get_chris_instance()
+        endpoint = f"{self.api_base}/"
+        response = requests.request("GET", endpoint, headers=self.headers, timeout=30)
+
+        response.raise_for_status()
+
+        try:
+            return response.json()
+        except ValueError:
+            return response.text
 
     def pacs_pull(self):
         pass
     def pacs_push(self):
         pass
     def anonymize(self, params: dict, pv_id: int):
-        pipe = Pipeline(self.cl)
+        pipe = Pipeline(self.api_base, self.auth)
         plugin_params = {
             'PACS-query': {
                 "PACSurl": params["pull"]["url"],
@@ -52,9 +56,7 @@ class ChrisClient(BaseClient):
                 "copyInputFile": True
             },
             'verify-registration': {
-                "CUBEurl": self.cl.url,
-                "CUBEuser": self.cl.username,
-                "CUBEpassword": self.cl.password,
+                "CUBEurl": self.api_base,
                 "inputJSONfile": "search_results.json",
                 "folderName": params["push"]["Folder name"],
                 "neuroDicomLocation": params["push"]["Dicom path"],

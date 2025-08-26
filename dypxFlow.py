@@ -6,13 +6,10 @@ from pflog import pflog
 from loguru import logger
 from chris_plugin import chris_plugin, PathMapper
 import pandas as pd
-import json
-import itertools
 from collections import ChainMap
 from chrisClient import ChrisClient
 import pfdcm
 import sys
-import time
 import os
 import concurrent.futures
 
@@ -29,7 +26,7 @@ logger_format = (
 logger.remove()
 logger.add(sys.stderr, format=logger_format)
 
-__version__ = '1.0.7'
+__version__ = '1.0.8'
 
 DISPLAY_TITLE = r"""
        _           _                ______ _               
@@ -68,19 +65,14 @@ parser.add_argument(
     help="CUBE URL. Please include api version in the url endpoint."
 )
 parser.add_argument(
-    "--CUBEuser",
-    default="chris",
-    help="CUBE/ChRIS username"
+    "--CUBEtoken",
+    default="",
+    help="CUBE/ChRIS user token"
 )
 parser.add_argument(
     "--maxThreads",
     default=4,
     help="max number of parallel threads"
-)
-parser.add_argument(
-    "--CUBEpassword",
-    default="chris1234",
-    help="CUBE/ChRIS password"
 )
 parser.add_argument(
     "--thread",
@@ -97,7 +89,7 @@ parser.add_argument(
     default=False,
 )
 parser.add_argument(
-    '--PACSurl',
+    '--PFDCMurl',
     default='',
     type=str,
     help='endpoint URL of pfdcm. Please include api version in the url endpoint.'
@@ -107,11 +99,6 @@ parser.add_argument(
     default='MINICHRISORTHANC',
     type=str,
     help='name of the PACS'
-)
-parser.add_argument(
-    "--pftelDB",
-    help="an optional pftel telemetry logger, of form '<pftelURL>/api/v1/<object>/<collection>/<event>'",
-    default="",
 )
 
 def skip_condition(row):
@@ -172,7 +159,7 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
                 results: Iterator = executor.map(lambda t: register_and_anonymize(options, t, options.wait), l_job)
 
             # Wait for all tasks to complete
-            # executor.shutdown(wait=True)
+            executor.shutdown(wait=True)
         else:
             for d_job in l_job:
                 response = register_and_anonymize(options, d_job)
@@ -200,12 +187,12 @@ def register_and_anonymize(options: Namespace, d_job: dict, wait: bool = False):
     """
     resp = {}
     d_job["pull"] = {
-        "url": options.PACSurl,
+        "url": options.PFDCMurl,
         "pacs": options.PACSname
     }
     LOG(d_job)
     if not d_job["push"]["status"]:
-        cube_con = ChrisClient(options.CUBEurl, options.CUBEuser, options.CUBEpassword)
+        cube_con = ChrisClient(options.CUBEurl, options.CUBEtoken)
         d_ret = cube_con.anonymize(d_job, options.pluginInstanceID)
     else:
         d_ret = d_job["push"]
@@ -226,14 +213,16 @@ def health_check(options) -> bool:
         return False
     try:
         # create connection object
-        cube_con = ChrisClient(options.CUBEurl, options.CUBEuser, options.CUBEpassword)
+        if not options.CUBEtoken:
+            options.CUBEtoken = os.environ['CHRIS_USER_TOKEN']
+        cube_con = ChrisClient(options.CUBEurl, options.CUBEtoken)
         cube_con.health_check()
     except Exception as ex:
         LOG(ex)
         return False
     try:
         # pfdcm health check
-        pfdcm.health_check(options.PACSurl)
+        pfdcm.health_check(options.PFDCMurl)
     except Exception as ex:
         LOG(ex)
         return False

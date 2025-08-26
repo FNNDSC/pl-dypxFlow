@@ -61,11 +61,9 @@ def compute_workflow_nodes_info(pipeline_default_parameters: list[dict], include
 
 
 class Pipeline:
-    def __init__(self, client):
-        self.cl = client
-        self.api_base = self.cl.url.rstrip('/')
-        self.auth = HTTPBasicAuth(self.cl.username, self.cl.password)
-        self.headers = {"Content-Type": "application/json"}
+    def __init__(self, url: str, token: str):
+        self.api_base = url.rstrip('/')
+        self.headers = {"Content-Type": "application/json", "Authorization": f"Token {token}"}
 
     # --------------------------
     # Retryable request handler
@@ -78,7 +76,7 @@ class Pipeline:
     )
     def make_request(self, method: str, endpoint: str, **kwargs):
         url = f"{self.api_base}{endpoint}"
-        response = requests.request(method, url, headers=self.headers, auth=self.auth, timeout=30, **kwargs)
+        response = requests.request(method, url, headers=self.headers, timeout=30, **kwargs)
         response.raise_for_status()
 
         try:
@@ -88,7 +86,7 @@ class Pipeline:
 
     def post_request(self, endpoint: str, **kwargs):
         url = f"{self.api_base}{endpoint}"
-        response = requests.request("POST", url, headers=self.headers, auth=self.auth, timeout=30, **kwargs)
+        response = requests.request("POST", url, headers=self.headers, timeout=30, **kwargs)
         response.raise_for_status()
 
         try:

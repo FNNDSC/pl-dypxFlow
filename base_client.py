@@ -1,9 +1,6 @@
 from abc import ABC, abstractmethod
 
 class BaseClient(ABC):
-    @abstractmethod
-    def create_con(self, params: dict):
-        pass
 
     @abstractmethod
     def pacs_pull(self):
