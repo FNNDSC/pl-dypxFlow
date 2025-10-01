@@ -12,6 +12,7 @@ import pfdcm
 import sys
 import os
 import concurrent.futures
+import asyncio
 
 LOG = logger.debug
 
@@ -26,7 +27,7 @@ logger_format = (
 logger.remove()
 logger.add(sys.stderr, format=logger_format)
 
-__version__ = '1.0.8'
+__version__ = '1.0.9'
 
 DISPLAY_TITLE = r"""
        _           _                ______ _               
@@ -100,6 +101,18 @@ parser.add_argument(
     type=str,
     help='name of the PACS'
 )
+parser.add_argument(
+    '--recipients',
+    default='',
+    type=str,
+    help='comma separated valid email recipient addresses'
+)
+parser.add_argument(
+    '--SMTPServer',
+    default='mailsmtp4.childrenshospital.org',
+    type=str,
+    help='valid email server'
+)
 
 def skip_condition(row):
     # Skip rows where starting column says 'no'
@@ -162,7 +175,7 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
             executor.shutdown(wait=True)
         else:
             for d_job in l_job:
-                response = register_and_anonymize(options, d_job)
+                response = asyncio.run(register_and_anonymize(options, d_job))
                 row = d_job["raw"]
                 row.update(d_job["push"])
                 row["status"] = response['status']
@@ -180,7 +193,7 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
 
 if __name__ == '__main__':
     main()
-def register_and_anonymize(options: Namespace, d_job: dict, wait: bool = False):
+async def register_and_anonymize(options: Namespace, d_job: dict, wait: bool = False):
     """
     1) Search through PACS for series and register in CUBE
     2) Run anonymize and push workflow on the registered series
@@ -190,10 +203,14 @@ def register_and_anonymize(options: Namespace, d_job: dict, wait: bool = False):
         "url": options.PFDCMurl,
         "pacs": options.PACSname
     }
+    d_job["notify"] = {
+        "recipients": options.recipients,
+        "smtp_server": options.SMTPServer
+    }
     LOG(d_job)
     if not d_job["push"]["status"]:
         cube_con = ChrisClient(options.CUBEurl, options.CUBEtoken)
-        d_ret = cube_con.anonymize(d_job, options.pluginInstanceID)
+        d_ret = await cube_con.anonymize(d_job, options.pluginInstanceID)
     else:
         d_ret = d_job["push"]
 

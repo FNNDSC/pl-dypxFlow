@@ -41,7 +41,7 @@ class ChrisClient(BaseClient):
         pass
     def pacs_push(self):
         pass
-    def anonymize(self, params: dict, pv_id: int):
+    async def anonymize(self, params: dict, pv_id: int):
         pipe = Pipeline(self.api_base, self.auth)
         plugin_params = {
             'PACS-query': {
@@ -64,9 +64,11 @@ class ChrisClient(BaseClient):
                 "neuroNiftiLocation": params["push"]["Nifti path"],
                 "PACSurl": params["pull"]["url"],
                 "PACSname": params["pull"]["pacs"],
+                "SMTPServer": params["notify"]["smtp_server"],
+                "recipients": params["notify"]["recipients"]
             }
         }
-        d_ret = pipe.run_pipeline(
+        d_ret = await pipe.run_pipeline(
             previous_inst = pv_id,
             pipeline_name = "PACS query, retrieve, registration verification, and run pipeline in CUBE 20250806",
             pipeline_params = plugin_params )
