@@ -6,8 +6,10 @@ from pflog import pflog
 from loguru import logger
 from chris_plugin import chris_plugin, PathMapper
 import pandas as pd
+from typing import List, Dict
 from collections import ChainMap
 from chrisClient import ChrisClient
+from notification import Notification
 import pfdcm
 import sys
 import os
@@ -27,7 +29,7 @@ logger_format = (
 logger.remove()
 logger.add(sys.stderr, format=logger_format)
 
-__version__ = '1.1.0'
+__version__ = '1.1.1'
 
 DISPLAY_TITLE = r"""
        _           _                ______ _               
@@ -151,18 +153,21 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
     #
     # Refer to the documentation for more options, examples, and advanced uses e.g.
     # adding a progress bar and parallelism.
-    log_file = os.path.join(options.outputdir, 'terminal.log')
-    logger.add(log_file)
+    log_file = outputdir / "terminal.log"
+    logger.add(str(log_file))
+
     if not health_check(options): sys.exit("An error occurred!")
 
     mapper = PathMapper.file_mapper(inputdir, outputdir, glob=options.pattern)
     for input_file, output_file in mapper:
 
-        df = pd.read_csv(input_file, dtype=str) #,skiprows=lambda x: 0 if x == 0 else skip_condition(pd.read_csv(input_file, nrows=x).iloc[-1].tolist()) )
-        #1 Remove rows with all NaN values
+        df = pd.read_csv(input_file, dtype=str)
+        # A custom row skipping condition can be added here to skip rows from the csv file
+        #,skiprows=lambda x: 0 if x == 0 else skip_condition(pd.read_csv(input_file, nrows=x).iloc[-1].tolist()) )
+        # 1 Remove rows with all NaN values
         df.dropna(how='all', inplace=True)
 
-        #2 Replace NaN values with empty strings
+        # 2 Replace NaN values with empty strings
         df_clean = df.fillna('')
         l_job = create_query(df_clean)
         d_df = []
@@ -183,9 +188,20 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
                 if response.get('error'):
                     pipeline_errors = True
 
-        csv_file = os.path.join(options.outputdir, input_file.name)
-        df = pd.DataFrame(d_df)
-        df.to_csv(csv_file, index=False)
+        # Write output CSV
+        out_csv = outputdir / input_file.name
+        pd.DataFrame(d_df).to_csv(out_csv, index=False)
+
+        LOG(f"Sending notification to user(s)")
+        try:
+            notification = Notification(options.CUBEurl, options.CUBEtoken)
+            notification.run_notification_plugin(pv_id=options.pluginInstanceID,
+                                                 msg="Pipeline finished running",
+                                                 rcpts=options.recipients,
+                                                 smtp=options.SMTPServer,
+                                                 search_data="")
+        except Exception as ex:
+            LOG(f"Error occurred: {ex}")
         if pipeline_errors:
             LOG(f"ERROR while running pipelines.")
             sys.exit(1)
@@ -193,97 +209,132 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
 
 if __name__ == '__main__':
     main()
-async def register_and_anonymize(options: Namespace, d_job: dict, wait: bool = False):
+
+async def register_and_anonymize(
+    options: Namespace,
+    d_job: dict,
+    wait: bool = False
+):
     """
-    1) Search through PACS for series and register in CUBE
-    2) Run anonymize and push workflow on the registered series
+    Run PACS query pipeline using the job dictionary
     """
-    resp = {}
-    d_job["pull"] = {
+
+    # Enrich job (non-destructive if already present)
+    d_job.setdefault("pull", {
         "url": options.PFDCMurl,
         "pacs": options.PACSname
-    }
-    d_job["notify"] = {
+    })
+    d_job.setdefault("notify", {
         "recipients": options.recipients,
         "smtp_server": options.SMTPServer
-    }
-    LOG(d_job)
-    if not d_job["push"]["status"]:
-        cube_con = ChrisClient(options.CUBEurl, options.CUBEtoken)
-        d_ret = await cube_con.anonymize(d_job, options.pluginInstanceID)
-    else:
-        d_ret = d_job["push"]
+    })
 
+    LOG(d_job)
+
+    # If already pushed, nothing to do
+    if d_job["push"].get("status"):
+        return d_job["push"]
+
+    cube_con = ChrisClient(options.CUBEurl, options.CUBEtoken)
+
+    # Run pipeline
+    d_ret = await cube_con.anonymize(d_job, options.pluginInstanceID)
+
+    # Optional neuro pull
+    search = d_job.get("search", {})
+    neuro = search.get("neuro")
+
+    if neuro:
+        d_ret = await cube_con.neuro_pull(
+            neuro,
+            search.get("sequence"),
+            d_job
+        )
 
     return d_ret
 
 
+
+def _get_or_env(value, env_key):
+    return value or os.environ[env_key]
+
+
 def health_check(options) -> bool:
     """
-    check if connections to pfdcm and CUBE is valid
+    Check if connections to PFDCM and CUBE are valid
     """
     try:
-        if not options.pluginInstanceID:
-            options.pluginInstanceID = os.environ['CHRIS_PREV_PLG_INST_ID']
-    except Exception as ex:
-        LOG(ex)
-        return False
-    try:
-        # create connection object
-        if not options.CUBEtoken:
-            options.CUBEtoken = os.environ['CHRIS_USER_TOKEN']
+        # Resolve required options from env if missing
+        options.pluginInstanceID = _get_or_env(
+            options.pluginInstanceID, 'CHRIS_PREV_PLG_INST_ID'
+        )
+        options.CUBEtoken = _get_or_env(
+            options.CUBEtoken, 'CHRIS_USER_TOKEN'
+        )
+
+        # CUBE health check
         cube_con = ChrisClient(options.CUBEurl, options.CUBEtoken)
         cube_con.health_check()
-    except Exception as ex:
-        LOG(ex)
-        return False
-    try:
-        # pfdcm health check
+
+        # PFDCM health check
         pfdcm.health_check(options.PFDCMurl)
+
+        return True
+
     except Exception as ex:
         LOG(ex)
         return False
-    return True
 
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
-def create_query(df: pd.DataFrame):
-    columns = df.columns
-    col_locs = {col: i for i, col in enumerate(columns)}
 
-    # Classify columns
-    l_srch_idx = [i for i, col in enumerate(columns) if "search" in str(col).lower()]
-    l_anon_idx = [i for i, col in enumerate(columns) if any(x in str(col).lower() for x in ("status", "folder", "path"))]
-    l_raw_idx = list(range(len(columns)))  # All columns
+def create_query(df: pd.DataFrame) -> List[Dict]:
+    """
+    Efficiently serializes the data table to create a job dictionary
+    """
 
-    l_job = []
+    columns = list(df.columns)
 
-    for row in df.itertuples(index=False):
-        row_values = list(row)
+    # Precompute column classifications
+    search_cols = []
+    anon_cols = []
+
+    for col in columns:
+        col_lower = str(col).lower()
+        if any(x in col_lower for x in ("search", "neuro", "sequence")):
+            # Precompute the transformed key once
+            key = col.split('.')[0].split('_')[1]
+            search_cols.append((col, key))
+
+        if any(x in col_lower for x in ("status", "folder", "path")):
+            anon_cols.append(col)
+
+    jobs = []
+
+    for row in df.itertuples(index=False, name=None):
+        row_dict = dict(zip(columns, row))
 
         # Search
-        s_d = [
-            {columns[i].split('.')[0].split('_')[1]: row_values[i]}
-            for i in l_srch_idx
-        ]
-        # Push/Anonymization
-        a_d = [
-            {columns[i]: row_values[i]}
-            for i in l_anon_idx
-        ]
-        # Raw
-        raw_d = [
-            {columns[i]: row_values[i]}
-            for i in l_raw_idx
-        ]
-        reversed_dict = dict(reversed(dict(ChainMap(*raw_d)).items()))
+        search = {
+            key: row_dict[col]
+            for col, key in search_cols
+        }
 
-        l_job.append({
-            "search": dict(ChainMap(*s_d)),
-            "push": dict(ChainMap(*a_d)),
-            "raw": reversed_dict
+        # Push / Anonymization
+        push = {
+            col: row_dict[col]
+            for col in anon_cols
+        }
+
+        # Raw
+        raw = dict(row_dict.items())
+
+        jobs.append({
+            "search": search,
+            "push": push,
+            "raw": raw
         })
 
-    return l_job
+    return jobs
+
 
 

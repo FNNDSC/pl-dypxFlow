@@ -1,16 +1,25 @@
 # A dynamic ChRIS plugin for PACS
 
-[![Version](https://img.shields.io/docker/v/fnndsc/pl-dypxFlow?sort=semver)](https://hub.docker.com/r/fnndsc/pl-dypxflow)
+[![Version](https://img.shields.io/docker/v/fnndsc/pl-dypxflow?sort=semver)](https://hub.docker.com/r/fnndsc/pl-dypxflow)
 [![MIT License](https://img.shields.io/github/license/fnndsc/pl-dypxFlow)](https://github.com/FNNDSC/pl-dypxFlow/blob/main/LICENSE)
 [![ci](https://github.com/FNNDSC/pl-dypxFlow/actions/workflows/ci.yml/badge.svg)](https://github.com/FNNDSC/pl-dypxFlow/actions/workflows/ci.yml)
 
-`pl-dypxFlow` is a [_ChRIS_](https://chrisproject.org/)
-_ds_ plugin which takes in ...  as input files and
-creates ... as output files.
+`pl-dypxFlow` is a [_ChRIS_](https://chrisproject.org/) **dynamic plugin** that orchestrates a PACS-based anonymization and processing pipeline.  
+It interacts with **Orthanc / PACS**, **pfdcm**, and **ChRIS/CUBE** services to automate DICOM workflows.
 
 ## Abstract
 
-...
+`pl-dypxFlow` is designed to drive an anonymization and data-flow pipeline starting from a PACS source.  
+The plugin supports:
+
+- Pattern-based input file selection
+- Integration with **CUBE/ChRIS**
+- Interaction with **PACS / Orthanc**
+- Optional parallel execution
+- Optional wait-for-completion behavior
+- Email notification support
+
+This plugin is typically used as a **controller/orchestrator** rather than a pure data-transform plugin.
 
 ## Installation
 

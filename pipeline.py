@@ -209,20 +209,23 @@ class Pipeline:
         }
 
     async def monitor_pipeline(self, workflow_id, total_jobs, pv_inst, rcpts, smtp, search_data):
-        d_search_data = json.loads(search_data)
-        while True:
-            status = self._get_workflow_status(workflow_id)
-            if status["workflow_failed"]:
-                logger.error("Pipeline failed.")
-                self.run_notification_plugin(pv_inst, "Pipeline failed with errors", rcpts, smtp, d_search_data)
-                break
-            if status["finished_jobs"] >= total_jobs:
-                logger.info("Pipeline complete.")
-                break
-            if status["total_jobs"] < total_jobs:
-                self.run_notification_plugin(pv_inst, "Nodes deleted in pipeline", rcpts, smtp, d_search_data)
-                break
-            time.sleep(20)
+        try:
+            d_search_data = json.loads(search_data)
+            while True:
+                status = self._get_workflow_status(workflow_id)
+                if status["workflow_failed"]:
+                    logger.error("Pipeline failed.")
+                    self.run_notification_plugin(pv_inst, "Pipeline failed with errors", rcpts, smtp, d_search_data)
+                    break
+                if status["finished_jobs"] >= total_jobs:
+                    logger.info("Pipeline complete.")
+                    break
+                if status["total_jobs"] < total_jobs:
+                    self.run_notification_plugin(pv_inst, "Nodes deleted in pipeline", rcpts, smtp, d_search_data)
+                    break
+                time.sleep(20)
+        except Exception as e:
+            logger.exception("Monitoring pipeline failed.")
 
     def run_notification_plugin(self, pv_id: int, msg: str, rcpts: str, smtp: str, search_data: str) -> int:
         """
@@ -250,8 +253,8 @@ class Pipeline:
                 "mail_server": smtp
             })
             return int(instance_id)
-        except Exception as ex:
-            logger.error(f"Error occurred while creating notification instance {ex}")
+        except Exception:
+            logger.error(f"Error occurred while creating notification instance")
             return -1
 
     def run_error_plugin(self, pv_id: int):
@@ -310,8 +313,16 @@ class Pipeline:
             workflow_id = self.post_workflow(pipeline_id=pipeline_id, previous_id=previous_inst, params=updated_params)
 
             # Start this in the background (not awaited)
-            asyncio.create_task(
+            task = asyncio.create_task(
                 self.monitor_pipeline(workflow_id, total_jobs, previous_inst, recipients, smtp_server, search_data))
+
+            def handle_task_result(task: asyncio.Task):
+                try:
+                    task.result()  # re-raises exception if one occurred
+                except Exception:
+                    logger.exception("monitor_pipeline task failed")
+
+            task.add_done_callback(handle_task_result)
 
             logger.info(f"Workflow posted successfully")
             return {"status": "Pipeline running"}
