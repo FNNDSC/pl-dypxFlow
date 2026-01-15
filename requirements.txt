@@ -1,6 +1,5 @@
 chris_plugin==0.4.0
 python-chrisclient==2.11.1
 pandas
-pflog==1.2.26
 loguru
 tenacity

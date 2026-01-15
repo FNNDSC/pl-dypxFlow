@@ -2,12 +2,10 @@
 
 from pathlib import Path
 from argparse import ArgumentParser, Namespace, ArgumentDefaultsHelpFormatter
-from pflog import pflog
 from loguru import logger
 from chris_plugin import chris_plugin, PathMapper
 import pandas as pd
 from typing import List, Dict
-from collections import ChainMap
 from chrisClient import ChrisClient
 from notification import Notification
 import pfdcm
@@ -29,7 +27,7 @@ logger_format = (
 logger.remove()
 logger.add(sys.stderr, format=logger_format)
 
-__version__ = '1.1.1'
+__version__ = '1.1.2'
 
 DISPLAY_TITLE = r"""
        _           _                ______ _               
