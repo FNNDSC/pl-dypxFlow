@@ -66,7 +66,9 @@ class ChrisClient(BaseClient):
                 "PACSurl": params["pull"]["url"],
                 "PACSname": params["pull"]["pacs"],
                 "SMTPServer": params["notify"]["smtp_server"],
-                "recipients": params["notify"]["recipients"]
+                "recipients": params["notify"]["recipients"],
+                "largeSequenceSize": params["relay"]["largeSequenceSize"],
+                "largeSequencePollInterval": params["relay"]["largeSequencePollInterval"],
             }
         }
         d_ret = await pipe.run_pipeline(

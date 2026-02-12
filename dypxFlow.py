@@ -27,7 +27,7 @@ logger_format = (
 logger.remove()
 logger.add(sys.stderr, format=logger_format)
 
-__version__ = '1.1.3'
+__version__ = '1.1.4'
 
 DISPLAY_TITLE = r"""
        _           _                ______ _               
@@ -112,6 +112,18 @@ parser.add_argument(
     default='mailsmtp4.childrenshospital.org',
     type=str,
     help='valid email server'
+)
+parser.add_argument(
+    '--largeSequenceSize',
+    default=10000,
+    type=int,
+    help='sequence size that will be considered as large sequence for delayed polling'
+)
+parser.add_argument(
+    '--largeSequencePollInterval',
+    default=10,
+    type=int,
+    help='poll interval time for large sequences (in minutes)'
 )
 
 def skip_condition(row):
@@ -225,6 +237,10 @@ async def register_and_anonymize(
     d_job.setdefault("notify", {
         "recipients": options.recipients,
         "smtp_server": options.SMTPServer
+    })
+    d_job.setdefault("relay", {
+        "largeSequenceSize": options.largeSequenceSize,
+        "largeSequencePollInterval": options.largeSequencePollInterval
     })
 
     LOG(d_job)

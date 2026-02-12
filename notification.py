@@ -85,7 +85,7 @@ class Notification:
             instance_id = self.create_plugin_instance(plugin_id, {
                 "previous_id": pv_id,
                 "content": email_content,
-                "title": f"Analysis {feed_details['name']} is complete.",
+                "title": f"Analysis *{feed_details['name']}* is complete.",
                 "rcpt": rcpts,
                 "sender": "noreply@fnndsc.org",
                 "mail_server": smtp
