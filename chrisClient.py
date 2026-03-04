@@ -77,22 +77,25 @@ class ChrisClient(BaseClient):
             pipeline_params = plugin_params )
         return d_ret
 
-    async def neuro_pull(self, neuro_location: str, sequence_filter: str, job_params: dict):
+    async def neuro_pull(self, neuro_location: str, feed_name: str, filter_str: str, job_params: dict):
         """
         1. Pull data from the neuro tree
         2. Run anonymization pipeline to the root node
         """
         send_params: dict = job_params["push"]
+        LOG(f"Pulling {filter_str} from {neuro_location}")
 
         ntf = Notification(self.api_base, self.auth)
-        neuro_plugin_id = ntf.get_plugin_id({"name": "pl-dircopy"})
+        neuro_plugin_id = ntf.get_plugin_id({"name": "pl-neurofiles-pull"})
 
         # Run pl-neuro_pull using filters
         neuro_inst_id = ntf.create_plugin_instance(neuro_plugin_id,
-                                                   {"previous_id": 10,
-                                                    "dir":"home/chris/uploads/data_upload-upload-38",
-                                                    "title": sequence_filter}
+                                                   {
+                                                    "path": neuro_location,
+                                                    "include": filter_str,
+                                                    "title": feed_name}
                                                    )
+        LOG(f"Created new analysis: {feed_name}")
 
         # Run anonymization pipeline
         pipe = Pipeline(self.api_base, self.auth)

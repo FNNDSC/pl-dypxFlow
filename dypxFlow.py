@@ -259,9 +259,12 @@ async def register_and_anonymize(
     neuro = search.get("neuro")
 
     if neuro:
+        filter_str: str = f"*{search['PatientID']}*/*{search['StudyDate']}*/*{search['sequence']}*/**"
+        feed_name: str = f"{search['PatientID']}_{search['StudyDate']}_{search['sequence']}"
         d_ret = await cube_con.neuro_pull(
             neuro,
-            search.get("sequence"),
+            feed_name,
+            filter_str,
             d_job
         )
 
