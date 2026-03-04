@@ -205,7 +205,7 @@ class Pipeline:
         return {
             "finished_jobs": finished_jobs,
             "total_jobs": finished_jobs + errored_jobs + cancelled_jobs + created_jobs + waiting_jobs + scheduled_jobs + started_jobs + registering_jobs,
-            "workflow_failed": (errored_jobs > 0)
+            "workflow_failed": (errored_jobs > 0 or cancelled_jobs > 0)
         }
 
     async def monitor_pipeline(self, workflow_id, total_jobs, pv_inst, rcpts, smtp, search_data):
