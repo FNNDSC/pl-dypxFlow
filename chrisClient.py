@@ -53,12 +53,10 @@ class ChrisClient(BaseClient):
             'PACS-retrieve': {
                 "PACSurl": params["pull"]["url"],
                 "PACSname": params["pull"]["pacs"],
-                "inputJSONfile": "search_results.json",
                 "copyInputFile": True
             },
             'verify-registration': {
                 "CUBEurl": self.api_base,
-                "inputJSONfile": "search_results.json",
                 "folderName": params["push"]["Folder name"],
                 "neuroDicomLocation": params["push"]["Dicom path"],
                 "neuroAnonLocation": params["push"]["Dicom anonymized path"],
