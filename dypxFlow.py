@@ -166,7 +166,7 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
     log_file = outputdir / "terminal.log"
     logger.add(str(log_file))
 
-    if not health_check(options): sys.exit("An error occurred!")
+    if not health_check(options): sys.exit("An error occurred during health check!")
 
     mapper = PathMapper.file_mapper(inputdir, outputdir, glob=options.pattern)
     for input_file, output_file in mapper:
