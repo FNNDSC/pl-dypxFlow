@@ -225,7 +225,7 @@ class Pipeline:
                     break
                 time.sleep(20)
         except Exception as e:
-            logger.exception("Monitoring pipeline failed.")
+            logger.exception(f"Monitoring pipeline failed.{str(e)}")
 
     def run_notification_plugin(self, pv_id: int, msg: str, rcpts: str, smtp: str, search_data: str) -> int:
         """

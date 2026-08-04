@@ -6,7 +6,7 @@ import requests
 from loguru import logger
 import sys
 from pipeline import Pipeline
-from notification import Notification
+from chris_notification import Notification
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
 from requests.exceptions import RequestException, Timeout, HTTPError
 

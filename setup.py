@@ -25,7 +25,7 @@ setup(
     author='FNNDSC',
     author_email='dev@babyMRI.org',
     url='https://github.com/FNNDSC/pl-dypxFlow',
-    py_modules=['dypxFlow','base_client','chrisClient','pfdcm','chris_pacs_service','pipeline','notification'],
+    py_modules=['dypxFlow','base_client','chrisClient','pfdcm','chris_pacs_service','pipeline','notifications', 'chris_notification', 'chris_notification_channel'],
     install_requires=['chris_plugin'],
     license='MIT',
     entry_points={
