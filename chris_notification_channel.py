@@ -39,9 +39,7 @@ class ChRISNotificationChannel(NotificationChannel):
             return
 
         if ctx.event == NotificationEvent.ERROR:
-            # run_error_plugin is currently unimplemented (`pass`) in the
-            # existing class. Once it's built out, swap this branch to call
-            # self.client.run_error_plugin(pv_id=pv_id, ...) instead.
+            # Build error-specific email
             self.client.run_notification_plugin(
                 pv_id=pv_id,
                 msg=f"Pipeline error: {ctx.message}",
@@ -50,6 +48,7 @@ class ChRISNotificationChannel(NotificationChannel):
                 search_data="",
             )
         else:
+            # Success path
             self.client.run_notification_plugin(
                 pv_id=pv_id,
                 msg=ctx.message,

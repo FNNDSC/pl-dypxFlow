@@ -314,18 +314,17 @@ def _get_or_env(value, env_key):
 def health_check(options) -> bool:
     """
     Check if connections to PFDCM and CUBE are valid.
-
-    Same return contract as before (True/False) so existing callers don't
-    need to change. Difference: each failure now fires a proper ERROR
-    notification (with the real exception and which system failed)
-    before returning False, instead of just logging and swallowing it.
     """
-    mgr = configure_notifications(options)
-    #mgr = NotificationManager.instance()
-    run_extra = {
-        "plugin_instance_id": getattr(options, "pluginInstanceID", None),
-        "recipients": getattr(options, "recipients", None),
-    }
+
+    LOG("health_check starting")
+
+    try:
+        mgr = configure_notifications(options)
+        LOG(f"Manager configured. Channels: {list(mgr.channels.keys())}")
+        LOG(f"ERROR routes to: {mgr.routing.get(NotificationEvent.ERROR, [])}")
+    except Exception as e:
+        LOG(f"ERROR configuring notifications: {e}")
+        raise
 
     try:
         # Resolve required options from env if missing
@@ -337,15 +336,23 @@ def health_check(options) -> bool:
         )
     except Exception as ex:
         LOG(ex)
+        # run_extra can't be built yet because options weren't resolved
+        # So either skip ChRIS for this error, or build it without plugin_instance_id
         mgr.notify(NotificationContext(
             event=NotificationEvent.ERROR,
             pipeline_name="health_check",
             step_name="resolve_options",
             message=f"Failed to resolve required options: {ex}",
             error=ex,
-            extra=run_extra,
+            extra={},  # Can't include plugin_instance_id yet
         ))
         return False
+
+    # NOW build run_extra with resolved options
+    run_extra = {
+        "plugin_instance_id": options.pluginInstanceID,
+        "recipients": options.recipients,
+    }
 
     # CUBE health check
     try:
@@ -359,7 +366,7 @@ def health_check(options) -> bool:
             step_name="cube_connection",
             message=f"CUBE health check failed ({options.CUBEurl}): {ex}",
             error=ex,
-            extra=run_extra,
+            extra=run_extra,  # ← now has real values
         ))
         return False
 
@@ -374,7 +381,7 @@ def health_check(options) -> bool:
             step_name="pfdcm_connection",
             message=f"PFDCM health check failed ({options.PFDCMurl}): {ex}",
             error=ex,
-            extra=run_extra,
+            extra=run_extra,  # ← now has real values
         ))
         return False
 

@@ -73,26 +73,28 @@ class Notification:
         """
         Run the pl-notification plugin.
         """
-        feed_id = self.get_feed_id_from_plugin_inst(pv_id)
-        feed_details = self.get_feed_details_from_id(feed_id)
-        email_content = (f"Your workflow is now complete."
-                         f"\nFeed Name: {feed_details['name']}"
-                         f"\nDate: {feed_details['date']}"
-                         f"\n\nKindly login to ChRIS as *{feed_details['owner']}* to access the logs for more details.")
-
         try:
+            feed_id = self.get_feed_id_from_plugin_inst(pv_id)
+            feed_details = self.get_feed_details_from_id(feed_id)
+
+            # Use msg to determine email tone
+            email_content = (f"{msg}"
+                             f"\nFeed Name: {feed_details['name']}"
+                             f"\nDate: {feed_details['date']}"
+                             f"\n\nKindly login to ChRIS as *{feed_details['owner']}* to access the logs for more details.")
+
             plugin_id = self.get_plugin_id({"name": "pl-notification", "version": "0.1.0"})
             instance_id = self.create_plugin_instance(plugin_id, {
                 "previous_id": pv_id,
                 "content": email_content,
-                "title": f"Analysis *{feed_details['name']}* is complete.",
+                "title": f"Analysis *{feed_details['name']}* - {msg.split(':')[0]}",  # Use msg in title too
                 "rcpt": rcpts,
                 "sender": "noreply@fnndsc.org",
                 "mail_server": smtp
             })
             return int(instance_id)
         except Exception as ex:
-            logger.error(f"Error occurred while creating notification instance {ex}")
+            logger.error(f"Error occurred while creating notification instance: {ex}", exc_info=True)
             return -1
 
 
