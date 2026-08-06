@@ -6,7 +6,10 @@ import requests
 from loguru import logger
 import sys
 from pipeline import Pipeline
-from notification import Notification
+from chris_notification import Notification
+from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
+from requests.exceptions import RequestException, Timeout, HTTPError
+
 LOG = logger.debug
 
 logger_format = (
@@ -27,6 +30,15 @@ class ChrisClient(BaseClient):
         self.headers = {"Content-Type": "application/json", "Authorization": f"Token {token}"}
         self.pacs_series_url = f"{url}/pacs/series/"
 
+    # --------------------------
+    # Retryable request handler
+    # --------------------------
+    @retry(
+        retry=retry_if_exception_type((RequestException, Timeout, HTTPError)),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        stop=stop_after_attempt(5),
+        reraise=True
+    )
     def health_check(self):
         endpoint = f"{self.api_base}/"
         response = requests.request("GET", endpoint, headers=self.headers, timeout=30)

@@ -225,7 +225,7 @@ class Pipeline:
                     break
                 time.sleep(20)
         except Exception as e:
-            logger.exception("Monitoring pipeline failed.")
+            logger.exception(f"Monitoring pipeline failed.{str(e)}")
 
     def run_notification_plugin(self, pv_id: int, msg: str, rcpts: str, smtp: str, search_data: str) -> int:
         """
@@ -240,7 +240,7 @@ class Pipeline:
                          f"\nMRN: {search_data['PatientID']} "
                          f"\nStudyDate: {search_data['StudyDate']}"
                          f"\nModality: {search_data['Modality']}"
-                         f"\n\nKindly login to ChRIS as *{feed_details['owner']}* to access the logs for more details.")
+                         f"\n\nPlease login to ChRIS as *{feed_details['owner']}* to access the logs for more details.")
 
         try:
             plugin_id = self._get_plugin_id({"name": "pl-notification", "version": "0.1.0"})

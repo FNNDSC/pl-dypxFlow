@@ -7,7 +7,10 @@ from chris_plugin import chris_plugin, PathMapper
 import pandas as pd
 from typing import List, Dict
 from chrisClient import ChrisClient
-from notification import Notification
+from notifications import ConsoleChannel, NotificationEvent, NotificationManager, NotificationContext
+from chris_notification import Notification
+from chris_notification_channel import ChRISNotificationChannel
+
 import pfdcm
 import sys
 import os
@@ -126,6 +129,29 @@ parser.add_argument(
     help='poll interval time for large sequences (in minutes)'
 )
 
+
+def configure_notifications(options):
+    mgr = NotificationManager.instance()
+
+    mgr.register_channel(ConsoleChannel())
+    mgr.register_channel(
+        ChRISNotificationChannel(
+            cube_url=options.CUBEurl,
+            cube_token=options.CUBEtoken,
+            smtp_server=options.SMTPServer,
+        )
+    )
+
+    # Edit this (or load_routing_from_file(...)) to change who gets notified
+    # for which event - no code changes needed elsewhere.
+    mgr.configure_routing(NotificationEvent.START, ["console"])
+    mgr.configure_routing(NotificationEvent.SUCCESS, ["console", "chris"])
+    mgr.configure_routing(NotificationEvent.ERROR, ["console", "chris"])
+    mgr.configure_routing(NotificationEvent.END, ["console"])
+
+    return mgr
+
+
 def skip_condition(row):
     # Skip rows where starting column says 'no'
     if row[0].lower() == 'yes':
@@ -156,17 +182,10 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
 
     print(DISPLAY_TITLE)
 
-    # Typically it's easier to think of programs as operating on individual files
-    # rather than directories. The helper functions provided by a ``PathMapper``
-    # object make it easy to discover input files and write to output files inside
-    # the given paths.
-    #
-    # Refer to the documentation for more options, examples, and advanced uses e.g.
-    # adding a progress bar and parallelism.
     log_file = outputdir / "terminal.log"
     logger.add(str(log_file))
 
-    if not health_check(options): sys.exit("An error occurred!")
+    if not health_check(options): sys.exit("An error occurred during health check!")
 
     mapper = PathMapper.file_mapper(inputdir, outputdir, glob=options.pattern)
     for input_file, output_file in mapper:
@@ -278,8 +297,19 @@ def _get_or_env(value, env_key):
 
 def health_check(options) -> bool:
     """
-    Check if connections to PFDCM and CUBE are valid
+    Check if connections to PFDCM and CUBE are valid.
     """
+
+    LOG("health_check starting")
+
+    try:
+        mgr = configure_notifications(options)
+        LOG(f"Manager configured. Channels: {list(mgr.channels.keys())}")
+        LOG(f"ERROR routes to: {mgr.routing.get(NotificationEvent.ERROR, [])}")
+    except Exception as e:
+        LOG(f"ERROR configuring notifications: {e}")
+        raise
+
     try:
         # Resolve required options from env if missing
         options.pluginInstanceID = _get_or_env(
@@ -288,20 +318,58 @@ def health_check(options) -> bool:
         options.CUBEtoken = _get_or_env(
             options.CUBEtoken, 'CHRIS_USER_TOKEN'
         )
-
-        # CUBE health check
-        cube_con = ChrisClient(options.CUBEurl, options.CUBEtoken)
-        cube_con.health_check()
-
-        # PFDCM health check
-        pfdcm.health_check(options.PFDCMurl)
-
-        return True
-
     except Exception as ex:
         LOG(ex)
+        # run_extra can't be built yet because options weren't resolved
+        # So either skip ChRIS for this error, or build it without plugin_instance_id
+        mgr.notify(NotificationContext(
+            event=NotificationEvent.ERROR,
+            pipeline_name="health_check",
+            step_name="resolve_options",
+            message=f"Failed to resolve required options: {ex}",
+            error=ex,
+            extra={},  # Can't include plugin_instance_id yet
+        ))
         return False
 
+    # NOW build run_extra with resolved options
+    run_extra = {
+        "plugin_instance_id": options.pluginInstanceID,
+        "recipients": options.recipients,
+    }
+
+    # CUBE health check
+    try:
+        cube_con = ChrisClient(options.CUBEurl, options.CUBEtoken)
+        cube_con.health_check()
+    except Exception as ex:
+        LOG(ex)
+        mgr.notify(NotificationContext(
+            event=NotificationEvent.ERROR,
+            pipeline_name="health_check",
+            step_name="cube_connection",
+            message=f"CUBE health check failed ({options.CUBEurl}): {ex}",
+            error=ex,
+            extra=run_extra,  # ← now has real values
+        ))
+        return False
+
+    # PFDCM health check
+    try:
+        pfdcm.health_check(options.PFDCMurl)
+    except Exception as ex:
+        LOG(ex)
+        mgr.notify(NotificationContext(
+            event=NotificationEvent.ERROR,
+            pipeline_name="health_check",
+            step_name="pfdcm_connection",
+            message=f"PFDCM health check failed ({options.PFDCMurl}): {ex}",
+            error=ex,
+            extra=run_extra,  # ← now has real values
+        ))
+        return False
+
+    return True
 
 
 def create_query(df: pd.DataFrame) -> List[Dict]:
