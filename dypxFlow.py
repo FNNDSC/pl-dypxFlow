@@ -181,23 +181,7 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
     """
 
     print(DISPLAY_TITLE)
-    mgr = configure_notifications(options)
 
-    # Per-run data the ChRIS channel needs (plugin instance id, recipients)
-    # gets attached once here, and flows into every START/SUCCESS/ERROR/END
-    # event fired inside this block automatically.
-    run_context = {
-        "plugin_instance_id": options.pluginInstanceID,
-        "recipients": options.recipients,
-    }
-
-    # Typically it's easier to think of programs as operating on individual files
-    # rather than directories. The helper functions provided by a ``PathMapper``
-    # object make it easy to discover input files and write to output files inside
-    # the given paths.
-    #
-    # Refer to the documentation for more options, examples, and advanced uses e.g.
-    # adding a progress bar and parallelism.
     log_file = outputdir / "terminal.log"
     logger.add(str(log_file))
 

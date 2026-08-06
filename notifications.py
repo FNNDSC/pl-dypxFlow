@@ -19,6 +19,7 @@ import logging
 import time
 import traceback
 import urllib.request
+from urllib.parse import urlparse
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Callable, Optional
@@ -169,6 +170,14 @@ class WebhookChannel(NotificationChannel):
     """Generic JSON webhook, e.g. for PagerDuty, Discord, internal services."""
     name = "webhook"
 
+    @staticmethod
+    def _validate_webhook_url(url: str) -> None:
+        parsed = urlparse(url)
+        if parsed.scheme not in ("http", "https"):
+            raise ValueError(f"Unsupported URL scheme: {parsed.scheme!r}")
+        if not parsed.netloc:
+            raise ValueError("Webhook URL must include a host")
+
     def __init__(self, url: str, headers: Optional[dict] = None):
         self.url = url
         self.headers = headers or {}
@@ -184,6 +193,7 @@ class WebhookChannel(NotificationChannel):
         }
         data = json.dumps(payload).encode("utf-8")
         headers = {"Content-Type": "application/json", **self.headers}
+        self._validate_webhook_url(self.url)
         req = urllib.request.Request(self.url, data=data, headers=headers)
         urllib.request.urlopen(req, timeout=5)
 

@@ -240,7 +240,7 @@ class Pipeline:
                          f"\nMRN: {search_data['PatientID']} "
                          f"\nStudyDate: {search_data['StudyDate']}"
                          f"\nModality: {search_data['Modality']}"
-                         f"\n\nKindly login to ChRIS as *{feed_details['owner']}* to access the logs for more details.")
+                         f"\n\nPlease login to ChRIS as *{feed_details['owner']}* to access the logs for more details.")
 
         try:
             plugin_id = self._get_plugin_id({"name": "pl-notification", "version": "0.1.0"})

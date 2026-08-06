@@ -81,7 +81,7 @@ class Notification:
             email_content = (f"{msg}"
                              f"\nFeed Name: {feed_details['name']}"
                              f"\nDate: {feed_details['date']}"
-                             f"\n\nKindly login to ChRIS as *{feed_details['owner']}* to access the logs for more details.")
+                             f"\n\nPlease login to ChRIS as *{feed_details['owner']}* to access the logs for more details.")
 
             plugin_id = self.get_plugin_id({"name": "pl-notification", "version": "0.1.0"})
             instance_id = self.create_plugin_instance(plugin_id, {
