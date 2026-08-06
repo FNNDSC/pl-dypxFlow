@@ -19,13 +19,13 @@ on:
 jobs:
   test:
     name: Unit tests
-    if: false  # delete this line to enable automatic testing
-    runs-on: ubuntu-22.04
+    if: true  # delete this line to enable automatic testing
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
       - name: Build
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           build-args: extras_require=dev
           context: .
@@ -43,7 +43,7 @@ jobs:
     name: Build
     if: github.event_name == 'push' || github.event_name == 'release'
     # needs: [ test ]  # uncomment to require passing tests
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Decide image tags
@@ -84,11 +84,11 @@ jobs:
               for k, v in outputs.items():
                   out.write(f'{k}={v}\n')
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         # QEMU is used for non-x86_64 builds
-      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-qemu-action@v4
         # buildx adds additional features to docker build
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
         with:
           driver-opts: network=host
 
@@ -96,7 +96,7 @@ jobs:
         # The first build pushes to our local registry for testing.
         # The second build pushes to Docker Hub and ghcr.io 
       - name: Build (local only)
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v7
         id: docker_build
         with:
           context: .
@@ -149,7 +149,7 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         if: (github.event_name == 'push' || github.event_name == 'release')
         with:
           context: .
