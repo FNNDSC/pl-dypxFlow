@@ -30,7 +30,7 @@ logger_format = (
 logger.remove()
 logger.add(sys.stderr, format=logger_format)
 
-__version__ = '1.1.7'
+__version__ = '1.1.8'
 
 DISPLAY_TITLE = r"""
        _           _                ______ _               
@@ -303,14 +303,6 @@ def health_check(options) -> bool:
     LOG("health_check starting")
 
     try:
-        mgr = configure_notifications(options)
-        LOG(f"Manager configured. Channels: {list(mgr.channels.keys())}")
-        LOG(f"ERROR routes to: {mgr.routing.get(NotificationEvent.ERROR, [])}")
-    except Exception as e:
-        LOG(f"ERROR configuring notifications: {e}")
-        raise
-
-    try:
         # Resolve required options from env if missing
         options.pluginInstanceID = _get_or_env(
             options.pluginInstanceID, 'CHRIS_PREV_PLG_INST_ID'
@@ -320,17 +312,15 @@ def health_check(options) -> bool:
         )
     except Exception as ex:
         LOG(ex)
-        # run_extra can't be built yet because options weren't resolved
-        # So either skip ChRIS for this error, or build it without plugin_instance_id
-        mgr.notify(NotificationContext(
-            event=NotificationEvent.ERROR,
-            pipeline_name="health_check",
-            step_name="resolve_options",
-            message=f"Failed to resolve required options: {ex}",
-            error=ex,
-            extra={},  # Can't include plugin_instance_id yet
-        ))
         return False
+
+    try:
+        mgr = configure_notifications(options)
+        LOG(f"Manager configured. Channels: {list(mgr.channels.keys())}")
+        LOG(f"ERROR routes to: {mgr.routing.get(NotificationEvent.ERROR, [])}")
+    except Exception as e:
+        LOG(f"ERROR configuring notifications: {e}")
+        raise
 
     # NOW build run_extra with resolved options
     run_extra = {
